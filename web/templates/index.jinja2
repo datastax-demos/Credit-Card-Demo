@@ -1,0 +1,384 @@
+{% extends "base.jinja2" %}
+
+{% block body %}
+
+<div class="col-md-11 col-md-offset-1" style=" margin-top:20px; margin-bottom:5px">
+        <div style="float:right" class="col-md-2  pull-left input-daterange input-group" id="datepicker">
+            <div id="daterange" class="pull-right"
+                 style="background: #fff; cursor: pointer; padding: 5px 10px; border: 1px solid #ccc; width: 100%">
+                <i class="glyphicon glyphicon-calendar fa fa-calendar"></i>&nbsp;
+                <span></span> <b class="caret"></b>
+            </div>
+        </div>
+    </div>
+    <div style="margin-top:20px">
+        <div id="transactionsByTime" class="col-md-6 col-md-offset-1">
+            <div style="border:0px" class="panel panel-default">
+                <div style="color:#ffffff;background-color:#333333;" class="panel-heading">
+                    <h3 id="transactionCount" class="panel-title">
+                        Transactions
+                        <span onclick="reloadLineChart()" class="pull-right glyphicon glyphicon-refresh" style="cursor: pointer;"></span>
+                    </h3>
+
+                </div>
+                <div class="panel-body">
+                    <div id="tranasctionsTimeSeries" style="height: 200px;"></div>
+
+
+                </div>
+            </div>
+        </div>
+        <div id="#areaChartPanel" class="col-md-4 ">
+            <div style="border:0px" class="panel panel-default">
+                <div style="color:#ffffff;background-color:#333333;" class="panel-heading">
+                    <h3 class="panel-title">Transactions By Merchant
+                        <span onclick="reloadPieChart()" class="pull-right glyphicon glyphicon-refresh" style="cursor: pointer;"></span>
+                    </h3>
+                </div>
+                <div class="panel-body">
+                    <div id="transactionsPie" style="height: 200px;"></div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-10 col-md-offset-1">
+
+            <div style="border-width:0px; padding-bottom:1px" class="panel panel-default">
+                <div style="color:#ffffff;background-color:#333333;" class="panel-heading">
+                    <h3 class="panel-title">Transactions Under Review
+                        <span onclick="reloadTable()" class="pull-right glyphicon glyphicon-refresh" style="cursor: pointer;"></span>
+                    </h3>
+                </div>
+                <div  style="margin:10px">
+                    <div>
+                        <table id="transactionsTable" class="table table-bordered">
+                            <thead>
+                            <th data-dynatable-column="cc_no">Credit Card Number</th>
+                            <th data-dynatable-column="merchant">Merchant ID</th>
+
+                            <th data-dynatable-column="amount">Amount</th>
+                            <th data-dynatable-column="date">Date</th>
+                            <th></th>
+                            </thead>
+                            <tbody>
+
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    {#</div>#}
+    <script type="text/javascript">
+        {#      $('.datepicker').datepicker({#}
+        {#          clearBtn: true,#}
+        {#          orientation: 'top auto',#}
+        {#          autoclose: true#}
+        {#      });#}
+
+        google.load("visualization", "1", {packages: ["corechart", "line", "table"]});
+        var startDate;
+        var endDate;
+        var dynaTable;
+        var lineChart;
+        var pieChart;
+
+
+
+
+        function cb(start, end) {
+            $('#daterange span').html(start.format('MMMM D, YYYY') + ' - ' + end.format('MMMM D, YYYY'));
+            if (startDate == null) {
+                startDate = moment(start).unix();
+                endDate = moment(end).unix();
+                drawTable();
+
+            }
+            else {
+                startDate = moment(start).unix();
+                endDate = moment(end).unix();
+                drawLineChart();
+            }
+
+        }
+        $("#daterange").daterangepicker({opens: 'right'}, cb);
+        cb(moment().subtract(29, 'days'), moment());
+
+
+
+        google.setOnLoadCallback(drawPieChart);
+        function drawPieChart() {
+            var jsonData = "";
+            $.ajax({
+                {#                url: "/api/simplequery?q=SELECT issuer FROM datastax_creditcard_demo.credit_card_transactions_by_issuer_date&chart_type=pie",#}
+                url: 'get_cc_by_merchant',
+                async: false,
+                data: {
+                    startDate: startDate,
+                    endDate: endDate,
+                },
+                success: function (data) {
+                    jsonData = data;
+                    var data = google.visualization.arrayToDataTable($.parseJSON(jsonData));
+
+                    var options = {
+                        pieHole: .3,
+                        colors: ['#27A944', '#304897', '#6549A8', '#C61B09', '#ED8725'],
+                        sliceVisibilityThreshold: .01,
+                        // pieSliceText: 'none',
+                        chartArea: {left: '0%', top: '0%', width: "100%", height: "100%"},
+                        legend: {
+                            // position:'top',
+                            alignment: 'center',
+                            textStyle: {
+                                color: '#000000',
+                                fontSize: 15,
+                                bold: false,
+                                italic: false
+                            }
+                        }
+                    };
+
+                    pieChart = new google.visualization.PieChart(document.getElementById('transactionsPie'));
+
+                    pieChart.draw(data, options);
+                }
+            });
+
+
+        }
+        function reloadPieChart() {
+            var jsonData = "";
+            $.ajax({
+                {#                url: "/api/simplequery?q=SELECT issuer FROM datastax_creditcard_demo.credit_card_transactions_by_issuer_date&chart_type=pie",#}
+                url: 'get_cc_by_merchant',
+                async: true,
+                data: {
+                    startDate: startDate,
+                    endDate: endDate,
+                },
+                success: function (data) {
+                    jsonData = data;
+                    var data = google.visualization.arrayToDataTable($.parseJSON(jsonData));
+
+                    var options = {
+                        pieHole: .3,
+                        colors: ['#27A944', '#304897', '#6549A8', '#C61B09', '#ED8725'],
+                        sliceVisibilityThreshold: .01,
+                        // pieSliceText: 'none',
+                        chartArea: {left: '0%', top: '0%', width: "100%", height: "100%"},
+                        legend: {
+                            // position:'top',
+                            alignment: 'center',
+                            textStyle: {
+                                color: '#000000',
+                                fontSize: 15,
+                                bold: false,
+                                italic: false
+                            }
+                        }
+                    };
+
+                    pieChart.draw(data, options);
+                }
+            });
+
+
+        }
+
+        google.setOnLoadCallback(drawLineChart);
+        function drawLineChart() {
+
+            var lineData = new google.visualization.DataTable();
+            lineData.addColumn('string', 'Day');
+            lineData.addColumn('number', 'Transactions');
+{#            lineData.addColumn('number', 'Fraudulent Transactions')#}
+            {#      lineData.addColumn('number', 'Visa');#}
+            {#      lineData.addColumn('number', 'MasterCard');#}
+            var jsonData = "";
+            $.ajax({
+                url: "/get_cc_by_date",
+                data: {
+                    startDate: startDate,
+                    endDate: endDate
+                },
+                async: true,
+                success: function (data) {
+                    jsonData = data.results;
+                    lineData.addRows(jsonData);
+
+
+                    var options = {
+                        chart: {
+                            // title: 'Box Office Earnings in First Two Weeks of Opening',
+                            // subtitle: 'in millions of dollars (USD)'
+                        },
+
+                        axes: {
+                            x: {
+                                0: {side: 'bottom'}
+                            }
+                        }
+                    };
+
+                    lineChart = new google.charts.Line(document.getElementById('tranasctionsTimeSeries'));
+
+                    lineChart.draw(lineData, options);
+                }
+            });
+
+        }
+        function reloadLineChart() {
+
+            var lineData = new google.visualization.DataTable();
+            lineData.addColumn('string', 'Day');
+            lineData.addColumn('number', 'Transactions');
+{#            lineData.addColumn('number', 'Fraudulent Transactions')#}
+
+
+            var jsonData = "";
+            $.ajax({
+                url: "/get_cc_by_date",
+                data: {
+                    startDate: startDate,
+                    endDate: endDate,
+                },
+                async: true,
+                success: function (data) {
+                    jsonData = data.results;
+                    lineData.addRows(jsonData);
+
+
+                    var options = {
+                        chart: {
+                            // title: 'Box Office Earnings in First Two Weeks of Opening',
+                            // subtitle: 'in millions of dollars (USD)'
+                        },
+
+                        axes: {
+                            x: {
+                                0: {side: 'bottom'}
+                            }
+                        }
+                    };
+                    lineChart.draw(lineData, options);
+                }
+            });
+
+        }
+        function myRowWriter(rowIndex, record, columns, cellWriter) {
+            var tr = '';
+
+            for (var i = 0, len = columns.length; i < len; i++) {
+                if (i == len - 1)
+                    if(record.blacklist == "false")
+                        tr += "<td><button class='btn btn-primary btn-xs view' data-id='" + record.transaction_id + "'>View</button></td>"
+                    else
+                        tr += "<td><button class='btn btn-warning btn-xs view' data-id='" + record.transaction_id + "'>View</button></td>"
+                else
+                    tr += cellWriter(columns[i], record);
+            }
+
+            return '<tr>' + tr + '</tr>';
+        }
+        function myRowReader(rowIndex, rowElement, record) {
+            record.customData = $(rowElement).data('stuff');
+        }
+        function drawTable() {
+            dynaTable = $("#transactionsTable").dynatable({
+                dataset: {
+                    records: [],
+                    ajax: true,
+                    ajaxOnLoad: true,
+                    ajaxUrl: '/get_cc_transactions'
+                },
+                writers: {
+                    _rowWriter: myRowWriter
+                },
+                readers: {
+                    _rowReader: myRowReader
+                }
+            }).data('dynatable');
+            $("#transactionsTable").dynatable().on("dynatable:afterUpdate", function()
+            {
+
+                $(".view").click(function() {
+
+                    if($(this).hasClass("btn-primary"))
+                        loadTransaction($(this).data("id"), false);
+                    else
+                        loadTransaction($(this).data("id"), true);
+                });
+            });
+
+        }
+        function reloadTable() {
+            dynaTable.process();
+
+        }
+        function loadTransaction(transaction_id, blacklisted) {
+
+            $.ajax({
+                url: '/transactions_modal',
+                data: {
+                    transaction_id: transaction_id
+                },
+                success: function (html) {
+                    $("#transactionBody").html(html);
+                    $("#markFraud").data("id", transaction_id);
+                }
+            });
+            $("#transactionTitle").text("Transaction: " + transaction_id)
+
+            if (blacklisted) {
+                $("#markFraud").removeClass("btn-danger");
+                $("#markFraud").addClass("btn-success");
+                $("#fraudSection").hide();
+                $("#markFraud").text("Approve")
+            }
+            else
+            {
+                $("#markFraud").removeClass("btn-success");
+                $("#markFraud").addClass("btn-danger");
+                $("#fraudSection").show();
+                $("#markFraud").text("Reject")
+            }
+            $("#transactionModal").modal("show");
+        }
+        $("#markFraud").on("click", function()
+        {
+             if($(this).hasClass("btn-danger")) {
+                 $.ajax({
+                     url: '/mark_transaction_fraud',
+                     data: {
+                         transaction_id: $(this).data("id"),
+                         reason: $("#fraudReason").val(),
+                     },
+                     success: function (data) {
+                         dynaTable.process();
+                     }
+                 })
+             }
+             else
+             {
+                 $.ajax({
+                     url: '/approve_transaction',
+                     data: {
+                         transaction_id: $(this).data("id"),
+
+                     },
+                     success: function (data) {
+                         dynaTable.process();
+                     }
+                 })
+             }
+        });
+
+        $(window).resize(function () {
+            drawPieChart();
+            drawLineChart();
+        });
+    </script>
+{% endblock %}

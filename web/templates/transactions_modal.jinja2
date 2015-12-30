@@ -1,0 +1,37 @@
+
+<div>
+    <label>Credit Card Number:</label>
+    <br/>
+    {{ transactions.cc_no}}
+    <br/>
+    <br/>
+    <label>Location:</label>
+    <br/>
+    {{ transactions.location}}
+    <br/>
+    <br/>
+    <label>Merchant:</label>
+    <br/>
+    {{ transactions.merchant}}
+    <br/>
+    <br/>
+    <label>Amount:</label>
+    <br/>
+    {{ transactions.amount}}
+    <br/>
+    <br/>
+    <label>Notes:</label>
+    <br/>
+    <textarea disabled readonly rows="4" cols="50">
+    {{ transactions.notes}}
+    </textarea>
+    <br/>
+
+    <br/>
+    <div class="input-group">
+        <div id="fraudSection">
+            <label id="reason">Reason for Rejection:</label>
+            <input type="text" id="fraudReason" class="form-control" placeholder="Reason">
+        </div>
+    </div>
+</div>

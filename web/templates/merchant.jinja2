@@ -1,0 +1,250 @@
+{% extends "base.jinja2" %}
+
+{% block body %}
+    <div style="margin-top:20px;">
+    <div class="col-md-7 col-md-offset-1">
+        <div class="form-group has-feedback has-feedback-left">
+            <input type="text" class="form-control" id="searchBox" placeholder="Search"/>
+            <i class="form-control-feedback glyphicon glyphicon-search"></i>
+        </div>
+        <div id="transactionsByTime">
+            <div style="border:0px" class="panel panel-default">
+                <div style="color:#ffffff;background-color:#333333;" class="panel-heading">
+
+                    <h3 id="merchantName" class="panel-title">
+                        Search For a Merchant
+
+                    </h3>
+                </div>
+                <div class="panel-body">
+                    <div id="blackListButtons" class="pull-left" hidden>
+                        <button id="addBlackList" class="btn btn-success btn-xs">Add to Blacklist</button>
+                        <button id="removeBlackList" class="btn btn-danger btn-xs" >Remove From Blacklist</button>
+                    </div>
+                    </br>
+                    </br>
+                    <div>
+                        <div id="merchantTable" hidden>
+                            <table id="merchant_cc_table" class="table table-bordered" >
+                                <thead>
+                                <th data-dynatable-column="cc_no">Credit Card Number</th>
+                                <th data-dynatable-column="merchant">Merchant ID</th>
+                                <th data-dynatable-column="amount">Amount</th>
+                                <th data-dynatable-column="date">Date</th>
+                                <th></th>
+                                </thead>
+                                <tbody>
+
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div style="border-width:0px; padding-bottom:1px" class="panel panel-default">
+            <div style="color:#ffffff;background-color:#333333;" class="panel-heading">
+                <h3 class="panel-title">Blacklist</h3>
+            </div>
+            <div class="panel-body">
+                <div>
+                    <div>
+                        <table id="blacklisted_merchant_table" class="table table-bordered">
+                            <thead>
+                            <th data-dynatable-column="merchant">Merchant</th>
+                            </thead>
+                            <tbody>
+
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <script>
+        var blackListTable;
+        var transactionTable;
+        initalizeMerchantTable();
+        function initalizeMerchantTable()
+        {
+            dynaTable = $("#merchant_cc_table").dynatable({
+                dataset: {
+
+                    records: [],
+                    ajax: true,
+                    ajaxOnLoad: true,
+
+                },
+                writers: {
+                    _rowWriter: myRowWriter
+                },
+                readers: {
+                    _rowReader: myRowReader
+                }
+            }).data('dynatable');
+            $("#merchant_cc_table").dynatable().on("dynatable:afterUpdate", function()
+            {
+
+                $(".view").click(function() {
+                    if($(this).hasClass("btn-primary"))
+                        loadTransaction($(this).data("id"), false);
+                    else
+                        loadTransaction($(this).data("id"), true);
+                });
+            });
+        }
+
+
+        $("#addBlackList").on("click",function()
+        {
+            $.ajax({
+                url:'/merchant/blacklist_merchant?merchant=' + encodeURIComponent($(this).data("name")),
+                success: function(data)
+                {
+                    reloadTable();
+                }
+            });
+
+        });
+        $("#removeBlackList").on("click",function()
+        {
+            $.ajax({
+                url:'/merchant/whitelist_merchant?merchant=' + encodeURIComponent($(this).data("name")),
+                success: function(data)
+                {
+                    reloadTable();
+                }
+            });
+
+        });
+        loadTable();
+        function loadTable() {
+
+            blackListTable = $("#blacklisted_merchant_table").dynatable({
+                dataset: {
+                    records: [],
+                    ajax: true,
+                    ajaxOnLoad: true,
+                    ajaxUrl: '/merchant/get_blacklisted_merchants'
+                },
+
+            }).data('dynatable');
+
+        }
+        function reloadTable()
+        {
+            blackListTable.process();
+        }
+        function myRowWriter(rowIndex, record, columns, cellWriter) {
+            var tr = '';
+
+            for (var i = 0, len = columns.length; i < len; i++) {
+                if (i == len - 1)
+                    if(record.blacklist == "false")
+                        tr += "<td><button class='btn btn-primary btn-xs view' data-id='" + record.transaction_id + "'>View</button></td>"
+                    else
+                        tr += "<td><button class='btn btn-warning btn-xs view' data-id='" + record.transaction_id + "'>View</button></td>"
+
+                else if(i == len -2) {
+
+                    tr += "<td>" +record.date+"</td>"
+                }
+                else
+                    tr += cellWriter(columns[i], record);
+            }
+
+            return '<tr>' + tr + '</tr>';
+        }
+        function myRowReader(rowIndex, rowElement, record) {
+            record.customData = $(rowElement).data('stuff');
+        }
+
+        $('#searchBox').keydown(function(e) {
+            if (e.keyCode == 13) {
+                e.preventDefault();
+               searchForMerchant($('#searchBox').val());
+
+            }
+
+        });
+        function searchForMerchant(merchantName)
+        {
+
+            dynaTable.settings.dataset.ajaxUrl = '/get_transactions_by_merchant?merchant=' + encodeURIComponent(merchantName)
+            dynaTable.process();
+            $("#merchantTable").show();
+            $("#merchantName").text(merchantName);
+            $("#blackListButtons").show();
+            $("#removeBlackList").data("name", merchantName);
+            $("#addBlackList").data("name", merchantName);
+
+
+        }
+
+        function loadTransaction(transaction_id, blacklisted) {
+
+            $.ajax({
+                url: '/transactions_modal',
+                data: {
+                    transaction_id: transaction_id
+                },
+                success: function (html) {
+                    $("#transactionBody").html(html);
+                    $("#markFraud").data("id", transaction_id);
+                }
+            });
+            if (blacklisted) {
+                $("#markFraud").removeClass("btn-danger");
+                $("#markFraud").addClass("btn-success");
+                $("#fraudSection").hide();
+                $("#markFraud").text("Approve")
+            }
+            else
+            {
+                $("#markFraud").removeClass("btn-success");
+                $("#markFraud").addClass("btn-danger");
+                $("#fraudSection").show();
+                $("#markFraud").text("Reject")
+            }
+            $("#transactionModal").modal("show");
+        }
+        $("#markFraud").on("click", function()
+        {
+             if($(this).hasClass("btn-danger")) {
+                 $.ajax({
+                     url: '/mark_transaction_fraud',
+                     data: {
+                         transaction_id: $(this).data("id"),
+                         reason: $("#fraudReason").val(),
+                     },
+                     success: function (data) {
+                         dynaTable.process();
+                     }
+                 })
+             }
+             else
+             {
+                 $.ajax({
+                     url: '/approve_transaction',
+                     data: {
+                         transaction_id: $(this).data("id"),
+
+                     },
+                     success: function (data) {
+                         dynaTable.process();
+                     }
+                 })
+             }
+        });
+
+
+    </script>
+
+
+
+{% endblock %}

@@ -1,0 +1,297 @@
+{% extends "base.jinja2" %}
+
+{% block body %}
+    <div style="margin-top:20px;">
+    <div class="col-md-7 col-md-offset-1">
+        <div class="form-group has-feedback has-feedback-left">
+            <input type="text" class="form-control" id="searchBox" placeholder="Search By Credit Card Number"/>
+            <i class="form-control-feedback glyphicon glyphicon-search"></i>
+        </div>
+        <div id="transactionsByTime">
+            <div style="border:0px" class="panel panel-default">
+                <div style="color:#ffffff;background-color:#333333;" class="panel-heading">
+
+                    <h3 id="userName" class="panel-title">
+                        Search For a User
+
+                    </h3>
+                </div>
+                <div class="panel-body">
+
+                    <div id="userInformation" hidden>
+                        <div class="col-md-offset-1" style="padding-left: 15px; padding-right:15px">
+                            <button id="addBlackList" class="btn btn-success btn-xs">Add to Blacklist</button>
+                            <button id="removeBlackList" class="btn btn-danger btn-xs" >Remove From Blacklist</button>
+                            </br>
+                            </br>
+                        </div>
+                        <div class="col-md-5 col-md-offset-1">
+
+                            <label>First Name:</label>
+                            </br>
+                            <div id="firstName">Adam</div>
+                            </br>
+                            <label>Gender:</label>
+                            </br>
+                            <div id="gender">Male</div>
+                            </br>
+                            <label>City:</label>
+                            </br>
+                            <div id="city">Austin</div>
+                            </br>
+                            <label>Credit Card Number:</label>
+                            </br>
+                            <div id="creditCardNumber">1234-4567-8904-1532</div>
+                        </div>
+                        <div class="col-md-5 col-md-offset-1">
+                            <label>Last Name:</label>
+                            </br>
+                            <div id="lastName">William</div>
+                            </br>
+                            </br>
+                            </br>
+                            </br>
+                            <label>State:</label>
+                            <div id="state">Texas</div>
+                        </div>
+{#                        </br>#}
+{#                        </br>#}
+{#                        <div>#}
+{#                            <table id="transactionsTable" class="table table-bordered">#}
+{#                                <thead>#}
+{#                                <th data-dynatable-column="cc_no">Credit Card Number</th>#}
+{#                                <th data-dynatable-column="issuer">Issuer</th>#}
+{#                                <th data-dynatable-column="date">Date</th>#}
+{#                                <th></th>#}
+{#                                </thead>#}
+{#                                <tbody>#}
+{##}
+{#                                </tbody>#}
+{#                            </table>#}
+{#                        </div>#}
+
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div style="border-width:0px; padding-bottom:1px" class="panel panel-default">
+            <div style="color:#ffffff;background-color:#333333;" class="panel-heading">
+                <h3 class="panel-title">Blacklist</h3>
+            </div>
+            <div class="panel-body">
+                <div>
+                    <div>
+                        <table id="blacklisted_user_table" class="table table-bordered">
+                            <thead>
+                            <th data-dynatable-column="cc_no">Credit Card</th>
+                            </thead>
+                            <tbody>
+
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <script>
+        var blackListTable;
+        var transactionTable;
+
+
+
+        $("#addBlackList").on("click",function()
+        {
+            $.ajax({
+                url:'/user/blacklist_user?cc_no=' + $(this).data("cc_no"),
+                success: function(data)
+                {
+                    reloadTable();
+                }
+            });
+
+        });
+        $("#removeBlackList").on("click",function()
+        {
+            $.ajax({
+                url:'/user/whitelist_user?cc_no=' + $(this).data("cc_no"),
+                success: function(data)
+                {
+                    reloadTable();
+                }
+            });
+
+        });
+
+{#        initalizeTransactionTable();#}
+{#        function initalizeTransactionTable()#}
+{#        {#}
+{#            transactionTable = $("#transactionsTable").dynatable({#}
+{#                dataset: {#}
+{##}
+{#                    records: [],#}
+{#                    ajax: true,#}
+{#                    ajaxOnLoad: true,#}
+{##}
+{#                },#}
+{#                writers: {#}
+{#                    _rowWriter: myRowWriter#}
+{#                },#}
+{#                readers: {#}
+{#                    _rowReader: myRowReader#}
+{#                }#}
+{#            }).data('dynatable');#}
+{#            $("#transactionsTable").dynatable().on("dynatable:afterUpdate", function()#}
+{#            {#}
+{##}
+{#                $(".view").click(function() {#}
+{##}
+{#                    if($(this).hasClass("btn-primary"))#}
+{#                        loadTransaction($(this).data("id"), false);#}
+{#                    else#}
+{#                        loadTransaction($(this).data("id"), true);#}
+{#                });#}
+{#            });#}
+{#        }#}
+        loadTable();
+        function loadTable() {
+
+            blackListTable = $("#blacklisted_user_table").dynatable({
+                dataset: {
+                    records: [],
+                    ajax: true,
+                    ajaxOnLoad: true,
+                    ajaxUrl: '/user/get_blacklisted_users'
+                },
+
+            }).data('dynatable');
+            $("#blacklisted_user_table").dynatable().on("dynatable:afterUpdate", function()
+            {
+
+                $(".view").click(function() {
+                    if($(this).hasClass("btn-primary"))
+                        loadTransaction($(this).data("id"), false);
+                    else
+                        loadTransaction($(this).data("id"), true);
+                });
+            });
+        }
+        function reloadTable()
+        {
+            blackListTable.process();
+        }
+
+
+
+
+
+        $('#searchBox').keydown(function(e) {
+            if (e.keyCode == 13) {
+                e.preventDefault();
+                searchForUser($('#searchBox').val());
+
+            }
+
+        });
+        function searchForUser(cc_no)
+        {
+
+            $.ajax({
+                url: '/user/get_user',
+                data:{
+                    cc_no:cc_no,
+                },
+                success:function(data)
+                {
+
+{#                    transactionTable.settings.dataset.ajaxUrl = '/get_transactions_user?cc_no=' + cc_no#}
+{#                    transactionTable.process();#}
+                    if(data.results.length > 0) {
+                        $("#userName").text(data.results[0].first + " " + data.results[0].last);
+                        $("#firstName").text(data.results[0].first);
+                        $("#lastName").text(data.results[0].last);
+                        $("#gender").text(data.results[0].gender);
+                        $("#ciy").text(data.results[0].city);
+                        $("#state").text(data.results[0].state);
+                        $("#creditCardNumber").text(data.results[0].cc_no);
+
+
+                        $("#removeBlackList").data("cc_no", cc_no);
+                        $("#addBlackList").data("cc_no", cc_no);
+
+                        $("#userInformation").show();
+                    }
+                }
+            })
+
+
+
+
+        }
+
+
+
+        function loadTransaction(transaction_id, blacklisted) {
+
+            $.ajax({
+                url: '/transactions_modal',
+                data: {
+                    transaction_id: transaction_id
+                },
+                success: function (html) {
+                    $("#transactionBody").html(html);
+                    $("#markFraud").data("id", transaction_id);
+                }
+            });
+            if (blacklisted) {
+                $("#markFraud").removeClass("btn-danger");
+                $("#markFraud").addClass("btn-success");
+                $("#fraudSection").hide();
+                $("#markFraud").text("Approve")
+            }
+            else
+            {
+                $("#markFraud").removeClass("btn-success");
+                $("#markFraud").addClass("btn-danger");
+                $("#fraudSection").show();
+                $("#markFraud").text("Reject")
+            }
+            $("#transactionModal").modal("show");
+        }
+        $("#markFraud").on("click", function()
+        {
+             if($(this).hasClass("btn-danger")) {
+                 $.ajax({
+                     url: '/mark_transaction_fraud',
+                     data: {
+                         transaction_id: $(this).data("id"),
+                         reason: $("#fraudReason").val(),
+                     },
+                     success: function (data) {
+                         dynaTable.process();
+                     }
+                 })
+             }
+             else
+             {
+                 $.ajax({
+                     url: '/approve_transaction',
+                     data: {
+                         transaction_id: $(this).data("id"),
+
+                     },
+                     success: function (data) {
+                         dynaTable.process();
+                     }
+                 })
+             }
+        });
+    </script>
+
+
+
+{% endblock %}
